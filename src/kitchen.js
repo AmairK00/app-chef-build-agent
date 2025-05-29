@@ -8,6 +8,7 @@ class Kitchen {
     constructor(options) {
         this.wsDir = options.wsDir;
         this.tempDir = this.wsDir + 'temp/';
+        this.chefServers = options.appChefServers;
         this.appChef = options.appChef;
         this.appChefKey = options.appChefKey;
         this.targetPlatforms = options.platforms;

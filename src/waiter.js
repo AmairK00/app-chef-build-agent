@@ -23,7 +23,7 @@ class Waiter {
 
     /**
      * Sometimes, downloaded zip is not getting decompressed.
-     * This is observerd on Apple Silicon Mac Pro systems. 
+     * This is observerd on Apple Silicon Mac Pro systems.
      */
     downloadOrder(url, dest) {
         const tempFile = this.kitchen.tempDir + `mobile_${Date.now()}.zip`;
@@ -66,9 +66,13 @@ class Waiter {
         });
     }
 
-    takeOrder() {
-        let url = `${this.kitchen.appChef}services/chef/assignWork?`
+    takeOrderFromAppChef(appChefUrl) {
+        let url = `${appChefUrl}services/chef/assignWork?`
         url += `platforms=${this.kitchen.targetPlatforms}&key=${this.kitchen.appChefKey}`;
+        logger.info({
+            label: loggerLabel,
+            message: `Invoking url to take order ${url}`
+        });
         return axios.get(url, {
             responseType: 'json'
         }).then(res => {
@@ -78,10 +82,15 @@ class Waiter {
                     `${this.kitchen.wsDir}${res.data.taskToken}/`,
                     5).then(() => res.data.taskToken);
             }
+        }, (err) => {
+            logger.error({
+                label: loggerLabel,
+                message: `error while taking order from appchef ${appChefUrl} error: ${err.message}`
+            });
         });
     }
 
-    async serve(success, buildTaskToken, buildFolder, settings) {
+    async serve(success, chefserver, buildTaskToken, buildFolder, settings) {
         success = !!success;
         const platform = settings.platform;
         const buildData = {};
@@ -123,7 +132,7 @@ class Waiter {
                 buildData['buildFolder'] = buildFolder;
                 buildData['buildTaskToken'] = buildTaskToken;
                 buildData['success'] = success;
-                return this.upload(buildData, 5);
+                return this.upload(chefserver, buildData, 5);
             }).then(() => {
                 logger.info({
                     label: loggerLabel,
@@ -139,7 +148,7 @@ class Waiter {
             });
     }
 
-    upload(data, retryCount) {
+    upload(chefserver, data, retryCount) {
         const buildLog = findFile(data.buildFolder + "build/output/logs/", /build.log?/);
         const form = new FormData();
         data.outputName && form.append('outputName', data.outputName);
@@ -148,12 +157,11 @@ class Waiter {
         form.append("success", "" + data.success);
         form.append("token", data.buildTaskToken);
         form.append("key", this.kitchen.appChefKey);
-        return axios.post(`${this.kitchen.appChef}services/chef/onBuildFinish`, form, {
-            headers : form.getHeaders(),
+        return axios.post(`${chefserver}services/chef/onBuildFinish`, form, {
+            headers: form.getHeaders(),
             maxContentLength: Infinity,
             maxBodyLength: Infinity
-        })
-        .catch((msg) => {
+        }).catch((msg) => {
             if (retryCount) {
                 logger.error({
                     label: loggerLabel,

@@ -1,6 +1,8 @@
 const homeDir = require('os').homedir();
 const fs = require('fs');
 const paramMap = {};
+
+console.log("process argv ", process.argv);
 process.argv.forEach(v => {
   if (v.indexOf("=")) {
     if (v.startsWith("--")) {
@@ -11,9 +13,12 @@ process.argv.forEach(v => {
   }
 });
 
-if (!paramMap['appChef']) {
-  throw new Error('appChef is missing');
+console.log("param map", paramMap);
+
+if (!paramMap['appChef']?.length) {
+  throw new Error('At least one AppChef URL is required');
 }
+
 if (!paramMap['appChefKey']) {
   throw new Error('appChefKey is missing');
 }
@@ -43,7 +48,7 @@ const prepareApp = (args) => {
   return {
     name: args['name'],
     script: __dirname + '/cli.js',
-    namespace: args['processGroup'] || 'appchef-agent', 
+    namespace: args['processGroup'] || 'appchef-agent',
     cwd: ws,
     autorestart: true,
     restart_delay: opi,
@@ -70,6 +75,7 @@ const prepareArgs = (tag, paramMap, tagDefaults) => {
   });
   return tagParams;
 };
+
 const apps = [];
 if (paramMap['platforms'].indexOf('android') >= 0) {
   apps.push(prepareApp(prepareArgs('android-', paramMap, {

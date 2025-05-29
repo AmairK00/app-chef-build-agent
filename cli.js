@@ -24,7 +24,9 @@ const args = require('yargs')
         await execa('pm2', ['delete', defaulProcessGroupName]);
     }).command('manage [options]', 'takes and processes orders', async yargs => {
         const argv = yargs.argv;
+        argv.appChefServers= argv.appChef.split(',');
         argv.platforms.split(',').forEach(v => {
+            console.log("final argv ", argv)
             argv.platforms = v;
             new Kitchen(argv).manager.manage(argv.killTimeout);
         });
@@ -38,7 +40,7 @@ const args = require('yargs')
         return new Kitchen(args).manager.processOrder(args.orderId);
     })
     .option('appChef', {
-        describe: 'URL of AppChef server.',
+        describe: 'comma separated urls of AppChef servers',
         type: 'string'
     })
     .option('appChefKey', {

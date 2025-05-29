@@ -24,7 +24,7 @@ class CordovaCook {
         }
     }
 
-    async doWork(buildTaskToken, settings, buildFolder) {
+    async doWork(chefserver, buildTaskToken, settings, buildFolder) {
         const start = Date.now();
         logger.info({
             label: loggerLabel,
@@ -68,7 +68,8 @@ class CordovaCook {
                     androidXMigrationEnabled: true,
                     allowHooks: true
                 });
-            };
+            }
+            ;
         } catch (e) {
             logger.error({
                 label: loggerLabel,
@@ -78,9 +79,9 @@ class CordovaCook {
         }
         logger.info({
             label: loggerLabel,
-            message: `Build took ${(Date.now() - start)/1000}s`
+            message: `Build took ${(Date.now() - start) / 1000}s`
         });
-        await this.kitchen.waiter.serve(result && result.success, buildTaskToken, buildFolder, settings);
+        await this.kitchen.waiter.serve(result && result.success, chefserver, buildTaskToken, buildFolder, settings);
     }
 }
 

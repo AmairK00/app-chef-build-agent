@@ -22,7 +22,7 @@ class ReactnativeCook {
         }
     }
 
-    async doWork(buildTaskToken, settings, buildFolder) {
+    async doWork(chefserver, buildTaskToken, settings, buildFolder) {
         const start = Date.now();
         logger.info({
             label: loggerLabel,
@@ -57,7 +57,8 @@ class ReactnativeCook {
                     autoEject: true,
                     platform: 'android'
                 });
-            };
+            }
+            ;
         } catch (e) {
             logger.error({
                 label: loggerLabel,
@@ -67,9 +68,9 @@ class ReactnativeCook {
         }
         logger.info({
             label: loggerLabel,
-            message: `Build took ${(Date.now() - start)/1000}s`
+            message: `Build took ${(Date.now() - start) / 1000}s`
         });
-        await this.kitchen.waiter.serve(result && result.success, buildTaskToken, buildFolder, settings);
+        await this.kitchen.waiter.serve(result && result.success, chefserver, buildTaskToken, buildFolder, settings);
     }
 }
 

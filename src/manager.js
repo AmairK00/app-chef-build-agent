@@ -14,51 +14,44 @@ class Manager {
     }
 
     async manage(maxAllowedTime) {
-        if (!this.ownsLock && fs.existsSync(this.kitchen.lockFile)) {
+        {
+            console.log("chef servers",this.kitchen.chefServers);
+            for (const chefServer of this.kitchen.chefServers) {
+                console.log("chef server", chefServer);
+                try {
+                    if (!this.ownsLock && fs.existsSync(this.kitchen.lockFile)) {
+                        process.exit();
+                    }
+                    this.ownsLock = true;
+                    fs.writeFileSync(this.kitchen.lockFile, 'locked');
+                    const orderId = await this.kitchen.waiter.takeOrderFromAppChef(chefServer);
+                    fs.unlinkSync(this.kitchen.lockFile);
+                    this.ownsLock = false;
+                    if (!orderId) {
+                        logger.info({label: loggerLabel, message: "No Work !!!"});
+                        continue;
+                    }
+                    await this.processOrder(chefServer, orderId, maxAllowedTime);
+                    logger.info({label: loggerLabel, message: "Work is completed."});
+                } catch (error) {
+                    logger.error({
+                        label: loggerLabel,
+                        message: `Failed: ${error.message}`
+                    });
+                } finally {
+                    if (this.ownsLock && fs.existsSync(this.kitchen.lockFile)) {
+                        fs.unlinkSync(this.kitchen.lockFile);
+                        this.ownsLock = false;
+                    }
+
+                }
+            }
+            logger.info({
+                label: loggerLabel,
+                message: `Will check again in ${this.kitchen.orderPullInterval}ms`
+            });
             process.exit();
-            return;
         }
-        this.ownsLock = true;
-        fs.writeFileSync(this.kitchen.lockFile, 'locked');
-        return this.kitchen.waiter.takeOrder().then(orderId => {
-            fs.unlinkSync(this.kitchen.lockFile);
-            this.ownsLock = false;
-            if (!orderId) {
-                logger.info({
-                    label: loggerLabel,
-                    message: "No Work !!!"
-                });
-                return;
-            }
-            return this.processOrder(orderId, maxAllowedTime).then(() => {
-                logger.info({
-                    label: loggerLabel,
-                    message: "Work is completed ."
-                });
-            }, (e) => {
-                logger.info({
-                    label: loggerLabel,
-                    message: "Failed to complete Work."
-                });
-                Promise.reject(e);
-            });
-        }, (e) => {
-            logger.info({
-                label: loggerLabel,
-                message: "Failed to due to : " + e
-            });
-        }).then(() => {
-            logger.info({
-                label: loggerLabel,
-                message: "Will check for work after " + this.kitchen.orderPullInterval + " ms"
-            });
-            if (this.ownsLock && fs.existsSync(this.kitchen.lockFile)) {
-                fs.unlinkSync(this.kitchen.lockFile);
-            }
-        }).then(() => process.exit(), (e) => {
-            console.error(e);
-            process.exit();
-        });
     }
 
     async process() {
@@ -66,7 +59,7 @@ class Manager {
         await this.processOrder(orderId);
     }
 
-    async processOrder(orderId, maxAllowedTime) {
+    async processOrder(chefserver, orderId, maxAllowedTime) {
         return new Promise((resolve, reject) => {
             setTimeout(() => {
                 logger.info({
@@ -74,15 +67,15 @@ class Manager {
                     message: `max time ${maxAllowedTime}ms reached.`
                 });
                 this.kitchen.waiter.serve(false, orderId, buildFolder, settings).then(reject);
-            }, maxAllowedTime || 20 * 60 *1000);
+            }, maxAllowedTime || 20 * 60 * 1000);
             const buildFolder = `${this.kitchen.wsDir}${orderId}/`;
             const settingsFile = buildFolder + '_br/settings.json';
             const settings = require(settingsFile);
             fs_extra.removeSync(settingsFile);
             if (settings.recipe === 'REACT_NATIVE') {
-                new ReactnativeCook(this.kitchen).doWork(orderId, settings, buildFolder).then(resolve, reject);
+                new ReactnativeCook(this.kitchen).doWork(chefserver, orderId, settings, buildFolder).then(resolve, reject);
             } else {
-                new CordovaCook(this.kitchen).doWork(orderId, settings, buildFolder).then(resolve, reject);
+                new CordovaCook(this.kitchen).doWork(chefserver, orderId, settings, buildFolder).then(resolve, reject);
             }
         });
     }
