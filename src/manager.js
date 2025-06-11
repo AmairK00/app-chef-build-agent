@@ -31,6 +31,7 @@ class Manager {
                         logger.info({label: loggerLabel, message: "No Work !!!"});
                         continue;
                     }
+                    this.checkIfSettingsFileExists(orderId)
                     await this.processOrder(chefServer, orderId, maxAllowedTime);
                     logger.info({label: loggerLabel, message: "Work is completed."});
                 } catch (error) {
@@ -59,7 +60,29 @@ class Manager {
         await this.processOrder(orderId);
     }
 
+    checkIfSettingsFileExists(orderId){
+        const buildFolder = `${this.kitchen.wsDir}${orderId}/`;
+        const settingsFile = buildFolder + '_br/settings.json';
+        let existsSettings = fs.existsSync(settingsFile);
+        logger.info({
+            label: loggerLabel,
+            message: `Settings file ${settingsFile} exists : ${existsSettings}`
+        });
+        if (existsSettings){
+            const rawData = fs.readFileSync(settingsFile, 'utf-8');
+            const settings = JSON.parse(rawData);
+            logger.info({
+                label: loggerLabel,
+                message: `Content of settings file ${settingsFile} : ${settings}`
+            });
+        }
+    }
+
     async processOrder(chefserver, orderId, maxAllowedTime) {
+        const buildFolder = `${this.kitchen.wsDir}${orderId}/`;
+        const settingsFile = buildFolder + '_br/settings.json';
+        this.checkIfSettingsFileExists(orderId);
+        const settings = require(settingsFile);
         return new Promise((resolve, reject) => {
             setTimeout(() => {
                 logger.info({
@@ -68,9 +91,7 @@ class Manager {
                 });
                 this.kitchen.waiter.serve(false, orderId, buildFolder, settings).then(reject);
             }, maxAllowedTime || 20 * 60 * 1000);
-            const buildFolder = `${this.kitchen.wsDir}${orderId}/`;
-            const settingsFile = buildFolder + '_br/settings.json';
-            const settings = require(settingsFile);
+
             fs_extra.removeSync(settingsFile);
             if (settings.recipe === 'REACT_NATIVE') {
                 new ReactnativeCook(this.kitchen).doWork(chefserver, orderId, settings, buildFolder).then(resolve, reject);

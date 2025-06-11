@@ -169,7 +169,7 @@ class Waiter {
                 });
                 return new Promise((res, rej) => {
                     setTimeout(() => {
-                        this.upload(data, --retryCount).then(res, rej);
+                        this.upload(chefserver, data, --retryCount).then(res, rej);
                     }, 30000);
                 });
             } else {
